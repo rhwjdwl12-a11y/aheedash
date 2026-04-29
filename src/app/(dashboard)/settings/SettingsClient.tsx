@@ -13,18 +13,24 @@ interface SettingsClientProps {
 }
 
 const CLIENT_COLORS = [
-  { label: "단국대 (초록)", value: "#5A7D4F" },
-  { label: "아희플랜 (주황)", value: "#B85C2D" },
-  { label: "서정대 (금색)", value: "#C9A96E" },
+  { label: "주황", value: "#B85C2D" },
+  { label: "초록", value: "#5A7D4F" },
+  { label: "금색", value: "#C9A96E" },
   { label: "보라", value: "#7B5EA7" },
   { label: "파랑", value: "#3B6FA0" },
+];
+
+// 빠른 추가용 기본 담당업체
+const DEFAULT_VENDORS = [
+  { name: "아희", color: "#B85C2D" },
+  { name: "GPI", color: "#3B6FA0" },
 ];
 
 export default function SettingsClient({ user, clients: initialClients }: SettingsClientProps) {
   const router = useRouter();
   const [clients, setClients] = useState(initialClients);
   const [newClientName, setNewClientName] = useState("");
-  const [newClientColor, setNewClientColor] = useState("#5A7D4F");
+  const [newClientColor, setNewClientColor] = useState("#B85C2D");
   const [saving, setSaving] = useState(false);
 
   const initialName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "";
@@ -49,26 +55,32 @@ export default function SettingsClient({ user, clients: initialClients }: Settin
     setSavingNickname(false);
   }
 
-  async function handleAddClient() {
-    if (!newClientName.trim()) { toast.error("클라이언트 이름을 입력해주세요."); return; }
+  async function handleAddClient(name?: string, color?: string) {
+    const finalName = (name ?? newClientName).trim();
+    const finalColor = color ?? newClientColor;
+    if (!finalName) { toast.error("담당업체 이름을 입력해주세요."); return; }
+    if (clients.some((c) => c.name === finalName)) {
+      toast.error("이미 등록된 담당업체입니다.");
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
     const { data, error } = await supabase.from("clients").insert({
       user_id: user!.id,
-      name: newClientName.trim(),
-      color: newClientColor,
+      name: finalName,
+      color: finalColor,
     }).select().single();
     if (error) toast.error(error.message);
     else {
-      toast.success("클라이언트 추가 완료");
+      toast.success(`${finalName} 추가됨`);
       setClients((prev) => [...prev, data as Client]);
-      setNewClientName("");
+      if (!name) setNewClientName("");
     }
     setSaving(false);
   }
 
   async function handleDeleteClient(id: string) {
-    if (!confirm("클라이언트를 삭제하시겠습니까?")) return;
+    if (!confirm("담당업체를 삭제하시겠습니까?")) return;
     const supabase = createClient();
     const { error } = await supabase.from("clients").delete().eq("id", id);
     if (error) toast.error(error.message);
@@ -129,16 +141,45 @@ export default function SettingsClient({ user, clients: initialClients }: Settin
         </div>
       </Section>
 
-      {/* 클라이언트 관리 */}
-      <Section title="클라이언트 관리">
+      {/* 담당업체 관리 */}
+      <Section title="담당업체 관리">
+        {/* 빠른 추가 (기본 업체) */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span style={{ fontSize: 11, color: "var(--text-meta)", alignSelf: "center" }}>
+            빠른 추가:
+          </span>
+          {DEFAULT_VENDORS.map((v) => {
+            const exists = clients.some((c) => c.name === v.name);
+            return (
+              <button
+                key={v.name}
+                onClick={() => handleAddClient(v.name, v.color)}
+                disabled={exists || saving}
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs hover:opacity-80 disabled:opacity-40"
+                style={{
+                  border: "0.5px solid var(--border)",
+                  backgroundColor: "var(--bg-base)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: v.color }}
+                />
+                {exists ? `${v.name} ✓` : `+ ${v.name}`}
+              </button>
+            );
+          })}
+        </div>
+
         {/* 추가 폼 */}
         <div className="flex gap-2 mb-4">
           <input
             type="text"
             value={newClientName}
             onChange={(e) => setNewClientName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddClient()}
-            placeholder="클라이언트 이름"
+            onKeyDown={(e) => e.key === "Enter" && handleAddClient(undefined, undefined)}
+            placeholder="담당업체 이름"
             style={{ ...inputStyle, flex: 1 }}
           />
           <select
@@ -149,7 +190,7 @@ export default function SettingsClient({ user, clients: initialClients }: Settin
             {CLIENT_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
           <button
-            onClick={handleAddClient}
+            onClick={() => handleAddClient(undefined, undefined)}
             disabled={saving}
             className="rounded-md px-3.5 py-2 text-sm font-medium hover:opacity-80 disabled:opacity-40"
             style={{ backgroundColor: "var(--text-primary)", color: "var(--bg-base)", whiteSpace: "nowrap" }}
@@ -158,9 +199,9 @@ export default function SettingsClient({ user, clients: initialClients }: Settin
           </button>
         </div>
 
-        {/* 클라이언트 목록 */}
+        {/* 담당업체 목록 */}
         {clients.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--text-meta)" }}>클라이언트가 없습니다</p>
+          <p style={{ fontSize: 13, color: "var(--text-meta)" }}>담당업체가 없습니다</p>
         ) : (
           <div className="flex flex-col gap-2">
             {clients.map((c) => (

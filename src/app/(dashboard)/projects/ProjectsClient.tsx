@@ -61,7 +61,7 @@ export default function ProjectsClient({ projects, clients, profiles = [], curre
       {/* 필터 바 */}
       <div className="flex flex-wrap gap-2">
         <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} style={selectStyle}>
-          <option value="전체">전체 클라이언트</option>
+          <option value="전체">전체 담당업체</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>

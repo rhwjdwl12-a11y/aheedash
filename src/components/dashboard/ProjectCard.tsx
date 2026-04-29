@@ -38,7 +38,7 @@ export default function ProjectCard({ project, client }: ProjectCardProps) {
           display: "flex",
         }}
       >
-        {/* 클라이언트 색상 액센트 바 */}
+        {/* 담당업체 색상 액센트 바 */}
         <div style={{ width: 3, backgroundColor: clientColor, flexShrink: 0 }} />
 
         <div className="flex flex-col gap-2 p-3 flex-1 min-w-0">

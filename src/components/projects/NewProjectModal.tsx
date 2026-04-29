@@ -102,8 +102,8 @@ export default function NewProjectModal({ clients, profiles = [], currentUserId 
             />
           </Field>
 
-          {/* 클라이언트 */}
-          <Field label="클라이언트">
+          {/* 담당업체 */}
+          <Field label="담당업체">
             <select
               value={form.client_id}
               onChange={(e) => set("client_id", e.target.value)}

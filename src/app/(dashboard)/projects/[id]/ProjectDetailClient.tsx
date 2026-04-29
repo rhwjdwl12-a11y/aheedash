@@ -268,7 +268,7 @@ export default function ProjectDetailClient({
           {client && (
             <div className="mt-5 pt-5" style={{ borderTop: "0.5px solid var(--border-soft)" }}>
               <h4 style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 8 }}>
-                클라이언트
+                담당업체
               </h4>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: clientColor }} />

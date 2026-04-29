@@ -160,7 +160,7 @@ export default function FinanceClient({ invoices, projects, clients }: FinanceCl
 
         {/* 클라이언트별 도넛 */}
         <div className="rounded-xl p-5 flex flex-col" style={{ backgroundColor: "var(--bg-surface)", border: "0.5px solid var(--border)" }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 16 }}>클라이언트별 매출</p>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 16 }}>담당업체별 매출</p>
           {clientTotals.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
@@ -218,7 +218,7 @@ export default function FinanceClient({ invoices, projects, clients }: FinanceCl
           <table className="w-full" style={{ backgroundColor: "var(--bg-surface)", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "0.5px solid var(--border-soft)" }}>
-                {["프로젝트", "클라이언트", "금액", "상태", "발행일", "입금일", ""].map((h) => (
+                {["프로젝트", "담당업체", "금액", "상태", "발행일", "입금일", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3" style={{ fontSize: 11, color: "var(--text-meta)", fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>

@@ -99,7 +99,7 @@ export default function RoadmapChart({ projects, clients }: RoadmapChartProps) {
             ))}
           </div>
           <select value={filterClientId} onChange={(e) => setFilterClientId(e.target.value)} style={selectStyle}>
-            <option value="전체">전체 클라이언트</option>
+            <option value="전체">전체 담당업체</option>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
