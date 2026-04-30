@@ -7,6 +7,7 @@ import { Pencil, Check, X } from "lucide-react";
 import { formatDday, getDdayColor } from "@/lib/utils/dday";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import FileUploadTab from "@/components/files/FileUploadTab";
+import EditProjectModal from "@/components/projects/EditProjectModal";
 import { deleteProject, updateProject } from "@/app/actions/projects";
 import type { Project, Client, Task, FileAttachment, Profile } from "@/types/database";
 
@@ -21,6 +22,7 @@ type Tab = "개요" | "태스크" | "파일" | "일정" | "메모";
 interface ProjectDetailClientProps {
   project: Project;
   client: Client | null;
+  clients?: Client[];
   tasks: Task[];
   files?: FileAttachment[];
   profiles?: Profile[];
@@ -31,6 +33,7 @@ interface ProjectDetailClientProps {
 export default function ProjectDetailClient({
   project,
   client,
+  clients = [],
   tasks,
   files = [],
   profiles = [],
@@ -40,6 +43,9 @@ export default function ProjectDetailClient({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("태스크");
   const TABS: Tab[] = ["개요", "태스크", "파일", "일정", "메모"];
+
+  // 프로젝트 편집 모달
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // 프로젝트명 인라인 편집
   const [title, setTitle] = useState(project.title);
@@ -122,13 +128,23 @@ export default function ProjectDetailClient({
             >
               {project.status}
             </span>
-            <button
-              onClick={handleDelete}
-              className="ml-auto text-xs hover:text-[var(--warning-text)] transition-colors"
-              style={{ color: "var(--text-meta)" }}
-            >
-              삭제
-            </button>
+            <div className="ml-auto flex items-center gap-3">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="text-xs hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <Pencil size={11} />
+                편집
+              </button>
+              <button
+                onClick={handleDelete}
+                className="text-xs hover:text-[var(--warning-text)] transition-colors"
+                style={{ color: "var(--text-meta)" }}
+              >
+                삭제
+              </button>
+            </div>
           </div>
 
           {/* 제목 (인라인 편집 가능) */}
@@ -293,6 +309,17 @@ export default function ProjectDetailClient({
         >
           <p style={{ fontSize: 13, color: "var(--text-meta)" }}>{tab} — 곧 추가됩니다</p>
         </div>
+      )}
+
+      {/* 편집 모달 */}
+      {showEditModal && (
+        <EditProjectModal
+          project={project}
+          clients={clients}
+          profiles={profiles}
+          memberIds={memberIds}
+          onClose={() => setShowEditModal(false)}
+        />
       )}
     </div>
   );

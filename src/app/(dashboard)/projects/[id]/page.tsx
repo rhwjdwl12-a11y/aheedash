@@ -52,6 +52,7 @@ export default async function ProjectDetailPage({
     <ProjectDetailClient
       project={typedProject}
       client={client}
+      clients={typedClients}
       tasks={taskList}
       files={(files as unknown as FileAttachment[]) ?? []}
       profiles={(profiles as Profile[]) ?? []}
