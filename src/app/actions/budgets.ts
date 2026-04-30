@@ -62,7 +62,7 @@ export async function createBudgetItem(data: {
 
 export async function updateBudgetItem(
   id: string,
-  projectId: string,
+  _projectId: string,
   data: Partial<{
     group_name: string;
     item_name: string;
@@ -78,7 +78,7 @@ export async function updateBudgetItem(
   const supabase = await createClient();
   const { error } = await supabase.from("project_budgets").update(data).eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}`);
+  // UI는 이미 낙관적 업데이트됨 — 페이지 재빌드 생략 (성능 개선)
   return { success: true };
 }
 
@@ -97,6 +97,5 @@ export async function updateBusinessAmount(projectId: string, amount: number | n
     .update({ business_amount: amount, updated_at: new Date().toISOString() })
     .eq("id", projectId);
   if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }

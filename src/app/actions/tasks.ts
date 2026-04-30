@@ -44,7 +44,7 @@ export async function createTask(data: {
 
 export async function updateTask(
   id: string,
-  projectId: string,
+  _projectId: string,
   data: Partial<{
     title: string;
     assignee: string | null;
@@ -55,7 +55,6 @@ export async function updateTask(
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").update(data).eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }
 
@@ -71,8 +70,8 @@ export async function updateTaskStatus(
     .eq("id", id);
 
   if (error) return { error: error.message };
+  // 진행률만 백그라운드 업데이트, 페이지 재빌드 생략
   await updateProgress(projectId);
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }
 

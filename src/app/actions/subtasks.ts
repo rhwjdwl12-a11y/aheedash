@@ -49,20 +49,18 @@ export async function createSubtask(data: {
 
 export async function updateSubtask(
   id: string,
-  projectId: string,
+  _projectId: string,
   data: Partial<{ title: string; is_done: boolean }>
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("subtasks").update(data).eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }
 
-export async function deleteSubtask(id: string, projectId: string) {
+export async function deleteSubtask(id: string, _projectId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("subtasks").delete().eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }

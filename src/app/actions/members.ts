@@ -75,7 +75,7 @@ export async function listTaskAssignees(projectId: string) {
   return { assignees: map };
 }
 
-export async function setTaskAssignees(taskId: string, userIds: string[], projectId: string) {
+export async function setTaskAssignees(taskId: string, userIds: string[], _projectId: string) {
   const supabase = await createClient();
   const filtered = Array.from(new Set(userIds));
 
@@ -87,6 +87,5 @@ export async function setTaskAssignees(taskId: string, userIds: string[], projec
     if (error) return { error: error.message };
   }
 
-  revalidatePath(`/projects/${projectId}`);
   return { success: true };
 }
