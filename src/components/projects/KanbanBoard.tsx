@@ -5,13 +5,14 @@ import { DndContext, DragEndEvent, PointerSensor, useDroppable, useSensor, useSe
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { Pencil, Check, ChevronDown, ChevronRight, GitBranch, Plus, Trash2 } from "lucide-react";
 import { createTask, updateTask, updateTaskStatus, deleteTask } from "@/app/actions/tasks";
 import { setTaskAssignees } from "@/app/actions/members";
+import { createSubtask, updateSubtask, deleteSubtask } from "@/app/actions/subtasks";
 import { formatDday, getDdayColor } from "@/lib/utils/dday";
 import MemberPicker from "@/components/shared/MemberPicker";
 import SubtaskList from "@/components/projects/SubtaskList";
-import type { Task, Profile } from "@/types/database";
+import type { Task, Profile, Subtask } from "@/types/database";
 
 const COLUMNS: { key: Task["status"]; label: string }[] = [
   { key: "todo", label: "할 일" },
@@ -34,6 +35,8 @@ interface KanbanBoardProps {
   projectMemberIds?: string[];
   /** taskId → user_id[] */
   taskAssignees?: Record<string, string[]>;
+  /** taskId → subtasks[] */
+  subtasksByTask?: Record<string, Subtask[]>;
   currentUserId?: string;
 }
 
@@ -41,15 +44,25 @@ function TaskCard({
   task,
   assigneeIds,
   profileMap,
+  subtasks,
+  projectId,
+  onSubtasksChange,
   onDelete,
   onEdit,
 }: {
   task: Task;
   assigneeIds: string[];
   profileMap: Record<string, Profile>;
+  subtasks: Subtask[];
+  projectId: string;
+  onSubtasksChange: (taskId: string, next: Subtask[]) => void;
   onDelete: (id: string) => void;
   onEdit: (task: Task) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [newSubTitle, setNewSubTitle] = useState("");
+  const [adding, setAdding] = useState(false);
+  const doneCount = subtasks.filter((s) => s.is_done).length;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
 
@@ -144,17 +157,137 @@ function TaskCard({
           {ddayStr && <span style={{ fontSize: 10, color: ddayColor }}>{ddayStr}</span>}
         </div>
       )}
+
+      {/* 세부 일정 인라인 박스 */}
+      <div className="mt-1.5">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[var(--neutral-bg)] transition-colors"
+          style={{ fontSize: 10, color: "var(--text-meta)" }}
+        >
+          {expanded ? <ChevronDown size={9} /> : <ChevronRight size={9} />}
+          <GitBranch size={9} />
+          세부 일정 {subtasks.length > 0 ? `${doneCount}/${subtasks.length}` : "추가"}
+        </button>
+
+        {expanded && (
+          <div
+            className="mt-1.5 ml-1.5 pl-2 flex flex-col gap-1"
+            style={{ borderLeft: "1.5px dashed var(--border)" }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {subtasks.length > 0 && (
+              <div className="w-full rounded-full overflow-hidden mb-0.5" style={{ height: 2, backgroundColor: "var(--border-soft)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(doneCount / subtasks.length) * 100}%`,
+                    backgroundColor: "var(--client-dankook)",
+                  }}
+                />
+              </div>
+            )}
+
+            {subtasks.map((s) => (
+              <div key={s.id} className="flex items-center gap-1.5 group">
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const next = !s.is_done;
+                    onSubtasksChange(
+                      task.id,
+                      subtasks.map((x) => (x.id === s.id ? { ...x, is_done: next } : x))
+                    );
+                    const r = await updateSubtask(s.id, projectId, { is_done: next });
+                    if (r?.error) toast.error(r.error);
+                  }}
+                  className="w-3 h-3 rounded flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: s.is_done ? "var(--text-primary)" : "transparent",
+                    border: "0.5px solid var(--border)",
+                  }}
+                >
+                  {s.is_done && <Check size={8} style={{ color: "var(--bg-base)" }} />}
+                </button>
+                <span
+                  className="flex-1 truncate"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-secondary)",
+                    textDecoration: s.is_done ? "line-through" : "none",
+                    opacity: s.is_done ? 0.5 : 1,
+                  }}
+                >
+                  {s.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    onSubtasksChange(task.id, subtasks.filter((x) => x.id !== s.id));
+                    const r = await deleteSubtask(s.id, projectId);
+                    if (r?.error) toast.error(r.error);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--neutral-bg)]"
+                >
+                  <Trash2 size={9} style={{ color: "var(--text-meta)" }} />
+                </button>
+              </div>
+            ))}
+
+            {/* 빠른 추가 */}
+            <div className="flex gap-1 mt-0.5">
+              <input
+                type="text"
+                value={newSubTitle}
+                onChange={(e) => setNewSubTitle(e.target.value)}
+                onKeyDown={async (e) => {
+                  e.stopPropagation();
+                  if (e.key !== "Enter" || !newSubTitle.trim() || adding) return;
+                  setAdding(true);
+                  const r = await createSubtask({
+                    task_id: task.id,
+                    title: newSubTitle,
+                    projectId,
+                  });
+                  if (r?.error) toast.error(r.error);
+                  else if (r?.subtask) {
+                    onSubtasksChange(task.id, [...subtasks, r.subtask as Subtask]);
+                    setNewSubTitle("");
+                  }
+                  setAdding(false);
+                }}
+                placeholder="세부 일정 + Enter"
+                className="flex-1 outline-none rounded px-1.5 py-0.5"
+                style={{
+                  fontSize: 11,
+                  border: "0.5px solid var(--border-soft)",
+                  backgroundColor: "var(--bg-base)",
+                  color: "var(--text-primary)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function Column({
-  column, tasks, assigneeMap, profileMap, onDelete, onAdd, onEdit,
+  column, tasks, assigneeMap, profileMap, subtasksMap, projectId, onSubtasksChange, onDelete, onAdd, onEdit,
 }: {
   column: (typeof COLUMNS)[number];
   tasks: Task[];
   assigneeMap: Record<string, string[]>;
   profileMap: Record<string, Profile>;
+  subtasksMap: Record<string, Subtask[]>;
+  projectId: string;
+  onSubtasksChange: (taskId: string, next: Subtask[]) => void;
   onDelete: (id: string) => void;
   onAdd: (status: Task["status"]) => void;
   onEdit: (task: Task) => void;
@@ -204,6 +337,9 @@ function Column({
               task={task}
               assigneeIds={assigneeMap[task.id] ?? []}
               profileMap={profileMap}
+              subtasks={subtasksMap[task.id] ?? []}
+              projectId={projectId}
+              onSubtasksChange={onSubtasksChange}
               onDelete={onDelete}
               onEdit={onEdit}
             />
@@ -232,9 +368,15 @@ export default function KanbanBoard({
   profiles = [],
   projectMemberIds = [],
   taskAssignees: initialAssignees = {},
+  subtasksByTask: initialSubtasks = {},
 }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [assigneeMap, setAssigneeMap] = useState<Record<string, string[]>>(initialAssignees);
+  const [subtasksMap, setSubtasksMap] = useState<Record<string, Subtask[]>>(initialSubtasks);
+
+  function handleSubtasksChange(taskId: string, next: Subtask[]) {
+    setSubtasksMap((m) => ({ ...m, [taskId]: next }));
+  }
   const [addingTo, setAddingTo] = useState<Task["status"] | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -366,6 +508,9 @@ export default function KanbanBoard({
               tasks={getColumnTasks(col.key)}
               assigneeMap={assigneeMap}
               profileMap={profileMap}
+              subtasksMap={subtasksMap}
+              projectId={projectId}
+              onSubtasksChange={handleSubtasksChange}
               onDelete={handleDelete}
               onAdd={openAdd}
               onEdit={openEdit}

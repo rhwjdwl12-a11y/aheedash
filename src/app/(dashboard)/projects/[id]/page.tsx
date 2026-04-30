@@ -37,14 +37,19 @@ export default async function ProjectDetailPage({
   // task_assignees 한 번에 fetch
   const taskIds = taskList.map((t) => t.id);
   const taskAssignees: Record<string, string[]> = {};
+  const subtasksByTask: Record<string, import("@/types/database").Subtask[]> = {};
   if (taskIds.length > 0) {
-    const { data: assignees } = await supabase
-      .from("task_assignees")
-      .select("task_id, user_id")
-      .in("task_id", taskIds);
+    const [{ data: assignees }, { data: subs }] = await Promise.all([
+      supabase.from("task_assignees").select("task_id, user_id").in("task_id", taskIds),
+      supabase.from("subtasks").select("*").in("task_id", taskIds).order("order_index"),
+    ]);
     for (const r of (assignees ?? []) as { task_id: string; user_id: string }[]) {
       if (!taskAssignees[r.task_id]) taskAssignees[r.task_id] = [];
       taskAssignees[r.task_id].push(r.user_id);
+    }
+    for (const s of (subs ?? []) as import("@/types/database").Subtask[]) {
+      if (!subtasksByTask[s.task_id]) subtasksByTask[s.task_id] = [];
+      subtasksByTask[s.task_id].push(s);
     }
   }
 
@@ -58,6 +63,7 @@ export default async function ProjectDetailPage({
       profiles={(profiles as Profile[]) ?? []}
       memberIds={((members as { user_id: string }[]) ?? []).map((m) => m.user_id)}
       taskAssignees={taskAssignees}
+      subtasksByTask={subtasksByTask}
     />
   );
 }

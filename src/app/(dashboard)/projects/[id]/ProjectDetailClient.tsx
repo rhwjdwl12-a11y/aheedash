@@ -9,7 +9,7 @@ import KanbanBoard from "@/components/projects/KanbanBoard";
 import FileUploadTab from "@/components/files/FileUploadTab";
 import EditProjectModal from "@/components/projects/EditProjectModal";
 import { deleteProject, updateProject } from "@/app/actions/projects";
-import type { Project, Client, Task, FileAttachment, Profile } from "@/types/database";
+import type { Project, Client, Task, FileAttachment, Profile, Subtask } from "@/types/database";
 
 const DDAY_COLORS = {
   urgent: "var(--warning-text)",
@@ -28,6 +28,7 @@ interface ProjectDetailClientProps {
   profiles?: Profile[];
   memberIds?: string[];
   taskAssignees?: Record<string, string[]>;
+  subtasksByTask?: Record<string, Subtask[]>;
 }
 
 export default function ProjectDetailClient({
@@ -39,6 +40,7 @@ export default function ProjectDetailClient({
   profiles = [],
   memberIds = [],
   taskAssignees = {},
+  subtasksByTask = {},
 }: ProjectDetailClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("태스크");
@@ -257,6 +259,7 @@ export default function ProjectDetailClient({
           projectId={project.id}
           profiles={profiles}
           taskAssignees={taskAssignees}
+          subtasksByTask={subtasksByTask}
           /* 본인이 소유자가 아니면 멤버 풀에 본인 포함 (자기는 자기 task에 자기 할당 가능) */
           projectMemberIds={[
             project.user_id,
