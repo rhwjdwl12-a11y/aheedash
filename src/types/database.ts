@@ -59,6 +59,15 @@ export interface Task {
   created_at: string;
 }
 
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  is_done: boolean;
+  order_index: number;
+  created_at: string;
+}
+
 export interface FileAttachment {
   id: string;
   project_id: string;

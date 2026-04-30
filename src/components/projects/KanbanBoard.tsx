@@ -10,6 +10,7 @@ import { createTask, updateTask, updateTaskStatus, deleteTask } from "@/app/acti
 import { setTaskAssignees } from "@/app/actions/members";
 import { formatDday, getDdayColor } from "@/lib/utils/dday";
 import MemberPicker from "@/components/shared/MemberPicker";
+import SubtaskList from "@/components/projects/SubtaskList";
 import type { Task, Profile } from "@/types/database";
 
 const COLUMNS: { key: Task["status"]; label: string }[] = [
@@ -481,6 +482,12 @@ export default function KanbanBoard({
                 style={{ ...inputStyle, resize: "none" }}
               />
             </div>
+
+            {/* 세부 일정 (서브태스크) */}
+            <div className="pt-2.5" style={{ borderTop: "0.5px solid var(--border-soft)" }}>
+              <SubtaskList taskId={editingTask.id} projectId={projectId} />
+            </div>
+
             <div className="flex gap-2 mt-1">
               <button
                 onClick={closeEdit}
