@@ -43,8 +43,25 @@ export interface Project {
   fee: number | null;
   progress: number;
   description: string | null;
+  business_amount: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectBudget {
+  id: string;
+  project_id: string;
+  group_name: string;
+  item_name: string;
+  unit_price: number;
+  quantity: number;
+  qty_unit: string;
+  count: number;
+  count_unit: string;
+  vat_included: boolean;
+  note: string;
+  order_index: number;
+  created_at: string;
 }
 
 export interface Task {

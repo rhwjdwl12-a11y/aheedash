@@ -8,8 +8,9 @@ import { formatDday, getDdayColor } from "@/lib/utils/dday";
 import KanbanBoard from "@/components/projects/KanbanBoard";
 import FileUploadTab from "@/components/files/FileUploadTab";
 import EditProjectModal from "@/components/projects/EditProjectModal";
+import BudgetTab from "@/components/projects/BudgetTab";
 import { deleteProject, updateProject } from "@/app/actions/projects";
-import type { Project, Client, Task, FileAttachment, Profile, Subtask } from "@/types/database";
+import type { Project, Client, Task, FileAttachment, Profile, Subtask, ProjectBudget } from "@/types/database";
 
 const DDAY_COLORS = {
   urgent: "var(--warning-text)",
@@ -17,7 +18,7 @@ const DDAY_COLORS = {
   normal: "var(--text-meta)",
 };
 
-type Tab = "개요" | "태스크" | "파일" | "일정" | "메모";
+type Tab = "개요" | "태스크" | "예산" | "파일" | "일정" | "메모";
 
 interface ProjectDetailClientProps {
   project: Project;
@@ -29,6 +30,7 @@ interface ProjectDetailClientProps {
   memberIds?: string[];
   taskAssignees?: Record<string, string[]>;
   subtasksByTask?: Record<string, Subtask[]>;
+  budgets?: ProjectBudget[];
 }
 
 export default function ProjectDetailClient({
@@ -41,10 +43,11 @@ export default function ProjectDetailClient({
   memberIds = [],
   taskAssignees = {},
   subtasksByTask = {},
+  budgets = [],
 }: ProjectDetailClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("태스크");
-  const TABS: Tab[] = ["개요", "태스크", "파일", "일정", "메모"];
+  const TABS: Tab[] = ["개요", "태스크", "예산", "파일", "일정", "메모"];
 
   // 프로젝트 편집 모달
   const [showEditModal, setShowEditModal] = useState(false);
@@ -299,6 +302,14 @@ export default function ProjectDetailClient({
             </div>
           )}
         </div>
+      )}
+
+      {tab === "예산" && (
+        <BudgetTab
+          projectId={project.id}
+          initialItems={budgets}
+          initialBusinessAmount={project.business_amount ?? null}
+        />
       )}
 
       {tab === "파일" && (

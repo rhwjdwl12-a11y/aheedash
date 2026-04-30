@@ -18,6 +18,7 @@ export default async function ProjectDetailPage({
     { data: files },
     { data: profiles },
     { data: members },
+    { data: budgets },
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).single(),
     supabase.from("clients").select("*"),
@@ -25,6 +26,7 @@ export default async function ProjectDetailPage({
     supabase.from("files").select("*").eq("project_id", id).order("uploaded_at", { ascending: false }),
     supabase.from("profiles").select("id, email, display_name").order("display_name"),
     supabase.from("project_members").select("user_id").eq("project_id", id),
+    supabase.from("project_budgets").select("*").eq("project_id", id).order("order_index"),
   ]);
 
   if (!project) return notFound();
@@ -64,6 +66,7 @@ export default async function ProjectDetailPage({
       memberIds={((members as { user_id: string }[]) ?? []).map((m) => m.user_id)}
       taskAssignees={taskAssignees}
       subtasksByTask={subtasksByTask}
+      budgets={(budgets as import("@/types/database").ProjectBudget[]) ?? []}
     />
   );
 }
