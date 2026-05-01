@@ -44,6 +44,7 @@ export interface Project {
   progress: number;
   description: string | null;
   business_amount: number | null;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }

@@ -7,7 +7,7 @@ export default async function ProjectsPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const [{ data: projects }, { data: clients }, { data: profiles }] = await Promise.all([
-    supabase.from("projects").select("*").order("created_at", { ascending: false }),
+    supabase.from("projects").select("*").order("display_order", { ascending: true }).order("created_at", { ascending: false }),
     supabase.from("clients").select("*").order("name"),
     supabase.from("profiles").select("id, email, display_name").order("display_name"),
   ]);

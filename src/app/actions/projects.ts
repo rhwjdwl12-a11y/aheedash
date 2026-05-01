@@ -93,6 +93,18 @@ export async function deleteProject(id: string) {
   return { success: true };
 }
 
+export async function reorderProjects(orders: { id: string; display_order: number }[]) {
+  const supabase = await createClient();
+  const results = await Promise.all(
+    orders.map((o) =>
+      supabase.from("projects").update({ display_order: o.display_order }).eq("id", o.id)
+    )
+  );
+  const firstError = results.find((r) => r.error);
+  if (firstError?.error) return { error: firstError.error.message };
+  return { success: true };
+}
+
 export async function updateProgress(projectId: string) {
   const supabase = await createClient();
   const { data: tasks } = await supabase
