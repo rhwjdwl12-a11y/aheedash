@@ -109,51 +109,137 @@ export default async function HomePage() {
       {/* 스티커 메모 섹션 */}
       <StickyNotesSection notes={allNotes} />
 
-      {/* 본문 2단 */}
-      <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4">
-        {/* 진행 중인 프로젝트 */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)" }}>
-              진행 중인 프로젝트
-            </h2>
-            <Link href="/projects" style={{ fontSize: 12, color: "var(--text-meta)" }}>
-              전체 보기
-            </Link>
-          </div>
-
-          {activeProjects.length === 0 ? (
-            <div
-              className="rounded-lg p-8 flex flex-col items-center justify-center gap-2"
-              style={{ backgroundColor: "var(--bg-surface)", border: "0.5px solid var(--border)" }}
-            >
-              <p style={{ fontSize: 13, color: "var(--text-meta)" }}>
-                첫 프로젝트를 추가해보세요
-              </p>
-              <Link
-                href="/projects"
-                className="rounded-md px-3 py-1.5 text-xs font-medium"
-                style={{ backgroundColor: "var(--neutral-bg)", color: "var(--text-secondary)" }}
-              >
-                + 새 프로젝트
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {activeProjects.map((p) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  client={p.client_id ? clientMap[p.client_id] : null}
-                />
-              ))}
-            </div>
-          )}
+      {/* 진행중 프로젝트 - 아희 / GPI 좌우 분할 */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)" }}>
+            진행 중인 프로젝트
+          </h2>
+          <Link href="/projects" style={{ fontSize: 12, color: "var(--text-meta)" }}>
+            전체 보기
+          </Link>
         </div>
 
-        {/* 미니 캘린더 */}
-        <MiniCalendar events={allEvents} />
+        {(() => {
+          const aheeClient = allClients.find((c) => c.name === "아희");
+          const gpiClient = allClients.find((c) => c.name === "GPI");
+          const aheeProjects = activeProjects.filter((p) => p.client_id === aheeClient?.id);
+          const gpiProjects = activeProjects.filter((p) => p.client_id === gpiClient?.id);
+          const otherProjects = activeProjects.filter(
+            (p) => p.client_id !== aheeClient?.id && p.client_id !== gpiClient?.id
+          );
+
+          if (activeProjects.length === 0) {
+            return (
+              <div
+                className="rounded-lg p-8 flex flex-col items-center justify-center gap-2"
+                style={{ backgroundColor: "var(--bg-surface)", border: "0.5px solid var(--border)" }}
+              >
+                <p style={{ fontSize: 13, color: "var(--text-meta)" }}>첫 프로젝트를 추가해보세요</p>
+                <Link
+                  href="/projects"
+                  className="rounded-md px-3 py-1.5 text-xs font-medium"
+                  style={{ backgroundColor: "var(--neutral-bg)", color: "var(--text-secondary)" }}
+                >
+                  + 새 프로젝트
+                </Link>
+              </div>
+            );
+          }
+
+          return (
+            <>
+              {/* 아희 / GPI 2단 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <ClientColumn
+                  title="아희 업무"
+                  color={aheeClient?.color ?? "#B85C2D"}
+                  projects={aheeProjects}
+                  clientMap={clientMap}
+                />
+                <ClientColumn
+                  title="GPI 업무"
+                  color={gpiClient?.color ?? "#3B6FA0"}
+                  projects={gpiProjects}
+                  clientMap={clientMap}
+                />
+              </div>
+
+              {/* 기타 (있을 때만) */}
+              {otherProjects.length > 0 && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block rounded-full"
+                      style={{ width: 6, height: 6, backgroundColor: "var(--text-meta)" }}
+                    />
+                    <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)" }}>
+                      기타
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {otherProjects.map((p) => (
+                      <ProjectCard key={p.id} project={p} client={p.client_id ? clientMap[p.client_id] : null} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
+
+      {/* 미니 캘린더 */}
+      <MiniCalendar events={allEvents} />
+    </div>
+  );
+}
+
+function ClientColumn({
+  title,
+  color,
+  projects,
+  clientMap,
+}: {
+  title: string;
+  color: string;
+  projects: import("@/types/database").Project[];
+  clientMap: Record<string, import("@/types/database").Client>;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="flex items-center gap-2 px-2 py-1.5 rounded-md"
+        style={{ backgroundColor: color + "15" }}
+      >
+        <span className="inline-block rounded-full" style={{ width: 8, height: 8, backgroundColor: color }} />
+        <p style={{ fontSize: 13, fontWeight: 600, color }}>{title}</p>
+        <span
+          className="rounded-full px-1.5 py-0.5 ml-auto"
+          style={{ fontSize: 10, backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}
+        >
+          {projects.length}
+        </span>
+      </div>
+      {projects.length === 0 ? (
+        <p
+          className="text-center py-6 rounded-md"
+          style={{
+            fontSize: 11,
+            color: "var(--text-meta)",
+            backgroundColor: "var(--bg-surface)",
+            border: "0.5px dashed var(--border)",
+          }}
+        >
+          진행 중인 프로젝트 없음
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} client={p.client_id ? clientMap[p.client_id] : null} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -53,55 +53,33 @@ export default function ProjectsClient({ projects: initialProjects, clients, pro
     return true;
   });
 
-  // 그룹화 (단기/중기/장기/기타) + 정렬
-  const grouped = useMemo(() => {
-    const map: Record<string, Project[]> = { 단기: [], 중기: [], 장기: [], 기타: [] };
-    for (const p of filtered) {
-      const key = (p.duration_type ?? "기타") as keyof typeof map;
-      if (!map[key]) map["기타"].push(p);
-      else map[key].push(p);
-    }
-    // display_order 우선, 그 다음 created_at desc
-    for (const k of Object.keys(map)) {
-      map[k].sort((a, b) => {
-        if (a.display_order !== b.display_order) return a.display_order - b.display_order;
-        return b.created_at.localeCompare(a.created_at);
-      });
-    }
-    return map;
-  }, [filtered]);
+  // 두 프로젝트의 display_order 값을 스왑
+  async function handleSwap(a: Project, b: Project) {
+    const aOrder = a.display_order;
+    const bOrder = b.display_order;
+    // 같은 값이면 살짝 다르게 (a를 b 뒤로 보냄)
+    const newAOrder = aOrder === bOrder ? bOrder + 1 : bOrder;
+    const newBOrder = aOrder;
 
-  async function handleMove(group: string, idx: number, direction: -1 | 1) {
-    const list = grouped[group];
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= list.length) return;
-
-    const a = list[idx];
-    const b = list[newIdx];
-
-    // 위치 스왑 (display_order 값 교환)
-    const reorderedList = [...list];
-    [reorderedList[idx], reorderedList[newIdx]] = [reorderedList[newIdx], reorderedList[idx]];
-
-    // 재할당 (0..N)
-    const updates = reorderedList.map((p, i) => ({ id: p.id, display_order: i }));
-
-    // 낙관적 업데이트
     setProjects((prev) =>
-      prev.map((p) => {
-        const u = updates.find((x) => x.id === p.id);
-        return u ? { ...p, display_order: u.display_order } : p;
-      })
+      prev.map((p) =>
+        p.id === a.id ? { ...p, display_order: newAOrder }
+          : p.id === b.id ? { ...p, display_order: newBOrder }
+          : p
+      )
     );
 
-    const res = await reorderProjects(updates);
+    const res = await reorderProjects([
+      { id: a.id, display_order: newAOrder },
+      { id: b.id, display_order: newBOrder },
+    ]);
     if (res?.error) {
       toast.error(res.error);
-      // 롤백
       setProjects((prev) =>
         prev.map((p) =>
-          p.id === a.id ? { ...p, display_order: a.display_order }
-            : p.id === b.id ? { ...p, display_order: b.display_order } : p
+          p.id === a.id ? { ...p, display_order: aOrder }
+            : p.id === b.id ? { ...p, display_order: bOrder }
+            : p
         )
       );
     }
@@ -158,52 +136,69 @@ export default function ProjectsClient({ projects: initialProjects, clients, pro
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          {DURATION_GROUPS.map(({ key, label, color }) => {
-            const list = grouped[key] ?? [];
-            if (list.length === 0) return null;
-            return (
-              <section key={key}>
-                {/* 섹션 헤더 */}
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span
-                    className="inline-block rounded-full"
-                    style={{ width: 8, height: 8, backgroundColor: color }}
-                  />
-                  <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                    {label}
-                  </h2>
-                  <span
-                    className="rounded-full px-1.5 py-0.5"
-                    style={{ fontSize: 10, backgroundColor: "var(--neutral-bg)", color: "var(--text-secondary)" }}
-                  >
-                    {list.length}
-                  </span>
-                </div>
+        (() => {
+          // 아희 / GPI / 기타 분리
+          const aheeClient = clients.find((c) => c.name === "아희");
+          const gpiClient = clients.find((c) => c.name === "GPI");
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                    gap: 12,
-                  }}
-                >
-                  {list.map((p, idx) => (
-                    <ProjectCardWithReorder
-                      key={p.id}
-                      project={p}
-                      client={p.client_id ? clientMap[p.client_id] : null}
-                      isFirst={idx === 0}
-                      isLast={idx === list.length - 1}
-                      onMoveUp={() => handleMove(key, idx, -1)}
-                      onMoveDown={() => handleMove(key, idx, 1)}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+          function splitByGroup(list: Project[]) {
+            const m: Record<string, Project[]> = { 단기: [], 중기: [], 장기: [], 기타: [] };
+            for (const p of list) {
+              const k = (p.duration_type ?? "기타") as keyof typeof m;
+              if (m[k]) m[k].push(p); else m["기타"].push(p);
+            }
+            for (const k of Object.keys(m)) {
+              m[k].sort((a, b) =>
+                a.display_order !== b.display_order
+                  ? a.display_order - b.display_order
+                  : b.created_at.localeCompare(a.created_at)
+              );
+            }
+            return m;
+          }
+
+          const aheeList = filtered.filter((p) => p.client_id === aheeClient?.id);
+          const gpiList = filtered.filter((p) => p.client_id === gpiClient?.id);
+          const otherList = filtered.filter(
+            (p) => p.client_id !== aheeClient?.id && p.client_id !== gpiClient?.id
+          );
+
+          return (
+            <div className="flex flex-col gap-6">
+              {/* 좌우 2단 (아희 / GPI) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <ProjectColumn
+                  title="아희 업무"
+                  color={aheeClient?.color ?? "#B85C2D"}
+                  groups={splitByGroup(aheeList)}
+                  clientMap={clientMap}
+                  onSwap={handleSwap}
+                  totalCount={aheeList.length}
+                />
+                <ProjectColumn
+                  title="GPI 업무"
+                  color={gpiClient?.color ?? "#3B6FA0"}
+                  groups={splitByGroup(gpiList)}
+                  clientMap={clientMap}
+                  onSwap={handleSwap}
+                  totalCount={gpiList.length}
+                />
+              </div>
+
+              {/* 기타 */}
+              {otherList.length > 0 && (
+                <ProjectColumn
+                  title="기타"
+                  color="var(--text-meta)"
+                  groups={splitByGroup(otherList)}
+                  clientMap={clientMap}
+                  onSwap={handleSwap}
+                  totalCount={otherList.length}
+                />
+              )}
+            </div>
+          );
+        })()
       )}
 
       {showModal && (
@@ -213,6 +208,84 @@ export default function ProjectsClient({ projects: initialProjects, clients, pro
           currentUserId={currentUserId}
           onClose={() => setShowModal(false)}
         />
+      )}
+    </div>
+  );
+}
+
+function ProjectColumn({
+  title,
+  color,
+  groups,
+  clientMap,
+  onSwap,
+  totalCount,
+}: {
+  title: string;
+  color: string;
+  groups: Record<string, Project[]>;
+  clientMap: Record<string, Client>;
+  onSwap: (a: Project, b: Project) => void;
+  totalCount: number;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded-md"
+        style={{ backgroundColor: color + "15" }}
+      >
+        <span className="inline-block rounded-full" style={{ width: 8, height: 8, backgroundColor: color }} />
+        <h2 style={{ fontSize: 14, fontWeight: 600, color }}>{title}</h2>
+        <span
+          className="rounded-full px-1.5 py-0.5 ml-auto"
+          style={{ fontSize: 10, backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}
+        >
+          {totalCount}
+        </span>
+      </div>
+
+      {totalCount === 0 ? (
+        <p
+          className="text-center py-8 rounded-md"
+          style={{
+            fontSize: 12,
+            color: "var(--text-meta)",
+            backgroundColor: "var(--bg-surface)",
+            border: "0.5px dashed var(--border)",
+          }}
+        >
+          프로젝트 없음
+        </p>
+      ) : (
+        DURATION_GROUPS.map(({ key, label, color: gColor }) => {
+          const list = groups[key] ?? [];
+          if (list.length === 0) return null;
+          return (
+            <section key={key}>
+              <div className="flex items-center gap-1.5 mb-2 ml-1">
+                <span
+                  className="inline-block rounded-full"
+                  style={{ width: 6, height: 6, backgroundColor: gColor }}
+                />
+                <p style={{ fontSize: 11, fontWeight: 500, color: "var(--text-secondary)" }}>{label}</p>
+                <span style={{ fontSize: 10, color: "var(--text-meta)" }}>· {list.length}</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {list.map((p, idx) => (
+                  <ProjectCardWithReorder
+                    key={p.id}
+                    project={p}
+                    client={p.client_id ? clientMap[p.client_id] : null}
+                    isFirst={idx === 0}
+                    isLast={idx === list.length - 1}
+                    onMoveUp={() => idx > 0 && onSwap(p, list[idx - 1])}
+                    onMoveDown={() => idx < list.length - 1 && onSwap(p, list[idx + 1])}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })
       )}
     </div>
   );
