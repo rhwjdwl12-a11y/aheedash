@@ -70,6 +70,7 @@ export async function updateProject(
     fee: number;
     progress: number;
     description: string;
+    notes: string;
   }>
 ) {
   const supabase = await createClient();

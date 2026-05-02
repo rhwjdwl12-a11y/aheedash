@@ -19,6 +19,7 @@ export default async function ProjectDetailPage({
     { data: profiles },
     { data: members },
     { data: budgets },
+    { data: events },
   ] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).single(),
     supabase.from("clients").select("*"),
@@ -27,6 +28,7 @@ export default async function ProjectDetailPage({
     supabase.from("profiles").select("id, email, display_name").order("display_name"),
     supabase.from("project_members").select("user_id").eq("project_id", id),
     supabase.from("project_budgets").select("*").eq("project_id", id).order("order_index"),
+    supabase.from("events").select("*").eq("project_id", id).order("event_date"),
   ]);
 
   if (!project) return notFound();
@@ -67,6 +69,7 @@ export default async function ProjectDetailPage({
       taskAssignees={taskAssignees}
       subtasksByTask={subtasksByTask}
       budgets={(budgets as import("@/types/database").ProjectBudget[]) ?? []}
+      events={(events as import("@/types/database").Event[]) ?? []}
     />
   );
 }

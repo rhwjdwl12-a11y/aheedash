@@ -9,8 +9,10 @@ import KanbanBoard from "@/components/projects/KanbanBoard";
 import FileUploadTab from "@/components/files/FileUploadTab";
 import EditProjectModal from "@/components/projects/EditProjectModal";
 import BudgetTab from "@/components/projects/BudgetTab";
+import ProjectNotesTab from "@/components/projects/ProjectNotesTab";
+import ProjectScheduleTab from "@/components/projects/ProjectScheduleTab";
 import { deleteProject, updateProject } from "@/app/actions/projects";
-import type { Project, Client, Task, FileAttachment, Profile, Subtask, ProjectBudget } from "@/types/database";
+import type { Project, Client, Task, FileAttachment, Profile, Subtask, ProjectBudget, Event } from "@/types/database";
 
 const DDAY_COLORS = {
   urgent: "var(--warning-text)",
@@ -31,6 +33,7 @@ interface ProjectDetailClientProps {
   taskAssignees?: Record<string, string[]>;
   subtasksByTask?: Record<string, Subtask[]>;
   budgets?: ProjectBudget[];
+  events?: Event[];
 }
 
 export default function ProjectDetailClient({
@@ -44,6 +47,7 @@ export default function ProjectDetailClient({
   taskAssignees = {},
   subtasksByTask = {},
   budgets = [],
+  events = [],
 }: ProjectDetailClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("태스크");
@@ -316,13 +320,12 @@ export default function ProjectDetailClient({
         <FileUploadTab projectId={project.id} files={files} />
       )}
 
-      {(tab === "일정" || tab === "메모") && (
-        <div
-          className="flex items-center justify-center rounded-xl"
-          style={{ minHeight: 200, backgroundColor: "var(--bg-surface)", border: "0.5px solid var(--border)" }}
-        >
-          <p style={{ fontSize: 13, color: "var(--text-meta)" }}>{tab} — 곧 추가됩니다</p>
-        </div>
+      {tab === "일정" && (
+        <ProjectScheduleTab projectId={project.id} initialEvents={events} />
+      )}
+
+      {tab === "메모" && (
+        <ProjectNotesTab projectId={project.id} initialNotes={project.notes ?? null} />
       )}
 
       {/* 편집 모달 */}
