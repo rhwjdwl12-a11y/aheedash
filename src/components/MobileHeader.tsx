@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Bell, X, Home, FolderKanban, Calendar, Wallet, Settings } from "lucide-react";
+import { Menu, Bell, X, Home, FolderKanban, GanttChart, Calendar, Wallet, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -19,6 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
 const BOTTOM_NAV = [
   { href: "/", label: "홈", icon: Home },
   { href: "/projects", label: "프로젝트", icon: FolderKanban },
+  { href: "/roadmap", label: "로드맵", icon: GanttChart },
   { href: "/calendar", label: "캘린더", icon: Calendar },
   { href: "/finance", label: "정산", icon: Wallet },
   { href: "/settings", label: "설정", icon: Settings },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { toggleNote, updateNoteContent, updateNoteColor, deleteNote } from "@/app/actions/notes";
+import { updateNoteContent, updateNoteColor, deleteNote } from "@/app/actions/notes";
 import type { StickyNote } from "@/types/database";
 
 const COLOR_BG: Record<StickyNote["color_key"], string> = {
@@ -31,9 +31,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 interface StickerCardProps {
   note: StickyNote;
+  /** 부모가 완료(=삭제) 처리할 때 호출. 호출자는 즉시 로컬 상태에서 제거. */
+  onComplete?: (id: string) => void;
 }
 
-export default function StickerCard({ note }: StickerCardProps) {
+export default function StickerCard({ note, onComplete }: StickerCardProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(note.content);
   const [showMenu, setShowMenu] = useState(false);
@@ -48,12 +50,17 @@ export default function StickerCard({ note }: StickerCardProps) {
     note.due_label &&
     (note.due_label.includes("오늘") || note.due_label.includes("긴급"));
 
-  async function handleToggle() {
+  async function handleComplete() {
     if (completing) return;
     setCompleting(true);
     if (typeof window !== "undefined" && navigator.vibrate) navigator.vibrate(15);
-    await toggleNote(note.id, !note.is_completed);
-    setCompleting(false);
+
+    // 잠깐 완료 표시 후 부모에게 삭제 요청
+    setTimeout(() => {
+      onComplete?.(note.id);
+      // 백그라운드에서 DB 삭제
+      deleteNote(note.id);
+    }, 380);
   }
 
   async function handleContentBlur() {
@@ -96,9 +103,9 @@ export default function StickerCard({ note }: StickerCardProps) {
           padding: 12,
           backgroundColor: bg,
           boxShadow: "1px 2px 0 rgba(61,47,32,0.08)",
-          transform: `rotate(${note.rotation}deg)`,
-          opacity: note.is_completed ? 0.75 : 1,
-          transition: "transform 0.15s, opacity 0.2s",
+          transform: `rotate(${note.rotation}deg) ${completing ? "scale(0.85)" : ""}`,
+          opacity: completing ? 0 : 1,
+          transition: "transform 0.35s ease-out, opacity 0.35s ease-out",
           cursor: "default",
         }}
         onContextMenu={handleContextMenu}
@@ -118,14 +125,15 @@ export default function StickerCard({ note }: StickerCardProps) {
             </span>
           </div>
           <button
-            onClick={handleToggle}
+            onClick={handleComplete}
             disabled={completing}
+            title="완료 (삭제)"
             style={{
               width: 14,
               height: 14,
               borderRadius: "50%",
-              border: `1.5px solid ${note.is_completed ? "var(--client-dankook)" : "var(--text-meta)"}`,
-              backgroundColor: note.is_completed ? "var(--client-dankook)" : "transparent",
+              border: `1.5px solid ${completing ? "var(--client-dankook)" : "var(--text-meta)"}`,
+              backgroundColor: completing ? "var(--client-dankook)" : "transparent",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -134,7 +142,7 @@ export default function StickerCard({ note }: StickerCardProps) {
               transition: "all 0.2s",
             }}
           >
-            {note.is_completed && (
+            {completing && (
               <svg width="8" height="8" viewBox="0 0 8 8">
                 <path d="M1 4L3 6L7 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -161,14 +169,14 @@ export default function StickerCard({ note }: StickerCardProps) {
           />
         ) : (
           <p
-            onClick={() => !note.is_completed && setEditing(true)}
+            onClick={() => !completing && setEditing(true)}
             style={{
               fontSize: 13,
               lineHeight: 1.45,
               color: "var(--text-primary)",
-              textDecoration: note.is_completed ? "line-through" : "none",
+              textDecoration: completing ? "line-through" : "none",
               flex: 1,
-              cursor: note.is_completed ? "default" : "text",
+              cursor: completing ? "default" : "text",
               wordBreak: "break-word",
             }}
           >

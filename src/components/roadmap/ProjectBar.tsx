@@ -21,12 +21,19 @@ interface ProjectBarProps {
   year: number;
 }
 
+/** #RRGGBB → rgba(r,g,b,a) */
+function hexToRgba(hex: string, alpha: number) {
+  const m = hex.replace("#", "").match(/.{1,2}/g);
+  if (!m || m.length < 3) return `rgba(0,0,0,${alpha})`;
+  const [r, g, b] = m.map((x) => parseInt(x, 16));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export default function ProjectBar({
   project,
   client,
   startMonth,
   endMonth,
-  year,
 }: ProjectBarProps) {
   const router = useRouter();
   const [tooltip, setTooltip] = useState(false);
@@ -40,11 +47,14 @@ export default function ProjectBar({
   const end = parseISO(project.deadline);
   const days = differenceInDays(end, start);
 
+  // 막대 안 텍스트 (제목 + 기간) — 막대 두꺼워졌으니 더 많이 노출
   let label = "";
-  if (days >= 60) {
-    label = `${format(start, "M.d")} ~ ${format(end, "M.d")}`;
-  } else if (days >= 20) {
-    label = `${format(start, "M.d")}~${format(end, "M.d")}`;
+  if (days >= 30) {
+    label = `${project.title} · ${format(start, "M.d")}~${format(end, "M.d")}`;
+  } else if (days >= 14) {
+    label = project.title;
+  } else if (days >= 7) {
+    label = project.title.slice(0, 4);
   }
 
   const ddayStr = formatDday(project.deadline);
@@ -58,27 +68,35 @@ export default function ProjectBar({
     <div
       style={{
         gridColumn: `${startMonth + 2} / ${endMonth + 3}`,
-        height: 16,
-        borderRadius: 3,
+        height: 26,
+        borderRadius: 5,
         backgroundColor: clientColor,
         opacity,
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
-        paddingLeft: 5,
-        paddingRight: 5,
+        padding: "0 10px",
         overflow: "hidden",
         position: "relative",
         minWidth: 4,
+        boxShadow: `0 1px 2px ${hexToRgba(clientColor, 0.2)}`,
+        transition: "transform 0.15s, box-shadow 0.15s",
       }}
       onClick={() => router.push(`/projects/${project.id}`)}
-      onMouseEnter={() => setTooltip(true)}
-      onMouseLeave={() => setTooltip(false)}
+      onMouseEnter={(e) => {
+        setTooltip(true);
+        (e.currentTarget as HTMLDivElement).style.boxShadow = `0 2px 6px ${hexToRgba(clientColor, 0.35)}`;
+      }}
+      onMouseLeave={(e) => {
+        setTooltip(false);
+        (e.currentTarget as HTMLDivElement).style.boxShadow = `0 1px 2px ${hexToRgba(clientColor, 0.2)}`;
+      }}
     >
       {label && (
         <span
           style={{
-            fontSize: 9,
+            fontSize: 11,
+            fontWeight: 500,
             color: "white",
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -104,7 +122,9 @@ export default function ProjectBar({
           }}
         >
           <p style={{ fontWeight: 500, marginBottom: 2 }}>{project.title}</p>
-          <p style={{ opacity: 0.8 }}>{tooltipText}</p>
+          <p style={{ opacity: 0.8 }}>
+            {tooltipText} {ddayDiff <= 7 && <span style={{ color: ddayColor }}>●</span>}
+          </p>
         </div>
       )}
     </div>

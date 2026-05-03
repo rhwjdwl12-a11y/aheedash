@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import StickerCard from "./StickerCard";
 import NewNoteModal from "./NewNoteModal";
@@ -12,12 +12,20 @@ interface StickyNotesSectionProps {
   notes: StickyNote[];
 }
 
-export default function StickyNotesSection({ notes }: StickyNotesSectionProps) {
+export default function StickyNotesSection({ notes: initialNotes }: StickyNotesSectionProps) {
   const [showModal, setShowModal] = useState(false);
+  const [notes, setNotes] = useState(initialNotes);
+
+  // 새로고침 등으로 props가 갱신되면 동기화
+  useEffect(() => {
+    setNotes(initialNotes);
+  }, [initialNotes]);
+
+  function handleComplete(id: string) {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }
 
   const total = notes.length;
-  const completed = notes.filter((n) => n.is_completed).length;
-  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
   const today = format(new Date(), "M월 d일 EEE", { locale: ko });
 
   return (
@@ -31,7 +39,7 @@ export default function StickyNotesSection({ notes }: StickyNotesSectionProps) {
                 오늘의 메모
               </span>
               <span style={{ fontSize: 11, color: "var(--text-meta)", marginLeft: 8 }}>
-                {today} · {total}개 중 {completed}개 완료
+                {today} · 할 일 {total}개
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -51,19 +59,6 @@ export default function StickyNotesSection({ notes }: StickyNotesSectionProps) {
               </button>
             </div>
           </div>
-          {/* 진행률 바 */}
-          <div
-            className="w-full rounded-full overflow-hidden"
-            style={{ height: 2, backgroundColor: "var(--border-soft)" }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${progress}%`,
-                backgroundColor: "var(--client-dankook)",
-              }}
-            />
-          </div>
         </div>
 
         {/* 스티커 그리드 */}
@@ -75,7 +70,7 @@ export default function StickyNotesSection({ notes }: StickyNotesSectionProps) {
           }}
         >
           {notes.map((note) => (
-            <StickerCard key={note.id} note={note} />
+            <StickerCard key={note.id} note={note} onComplete={handleComplete} />
           ))}
 
           {/* + 새 메모 카드 */}
