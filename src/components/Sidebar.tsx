@@ -21,9 +21,10 @@ const NAV = [
 interface SidebarProps {
   userName?: string;
   userEmail?: string;
+  isAdmin?: boolean;
 }
 
-export default function Sidebar({ userName, userEmail }: SidebarProps) {
+export default function Sidebar({ userName, userEmail, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -79,17 +80,22 @@ export default function Sidebar({ userName, userEmail }: SidebarProps) {
       <div className="px-4 py-4" style={{ borderTop: "0.5px solid var(--border-soft)" }}>
         <div className="flex items-center gap-2.5">
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-            style={{ backgroundColor: "var(--neutral-bg)", color: "var(--text-primary)" }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+            style={{ backgroundColor: "var(--text-primary)", color: "var(--bg-base)" }}
           >
             {initials}
           </div>
-          <span
-            className="text-xs flex-1 truncate"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            {displayName}
-          </span>
+          <div className="flex-1 min-w-0">
+            <p
+              className="truncate"
+              style={{ fontSize: 12, fontWeight: 500, color: "var(--text-primary)" }}
+            >
+              {displayName}
+            </p>
+            <p style={{ fontSize: 10, color: isAdmin ? "var(--client-aheeplan)" : "var(--text-meta)", fontWeight: isAdmin ? 500 : 400 }}>
+              {isAdmin ? "관리자" : "일반"}
+            </p>
+          </div>
           <button
             onClick={handleLogout}
             className="p-1 rounded transition-colors hover:bg-[var(--neutral-bg)]"

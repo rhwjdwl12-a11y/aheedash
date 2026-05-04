@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { Briefcase, CheckSquare, Calendar as CalendarIcon, FolderOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProjectCard from "@/components/dashboard/ProjectCard";
-import MiniCalendar from "@/components/dashboard/MiniCalendar";
+import HomeCalendar from "@/components/dashboard/HomeCalendar";
 import StickyNotesSection from "@/components/notes/StickyNotesSection";
 import type { Project, Client, Event, Invoice, StickyNote } from "@/types/database";
-import { startOfMonth, endOfMonth, addDays, addMonths } from "date-fns";
+import { startOfMonth, endOfMonth, addDays } from "date-fns";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -18,8 +19,6 @@ export default async function HomePage() {
   const in7Days = format(addDays(now, 7), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-  // 미니 캘린더용: 이번 달 ~ +2개월 후 말일
-  const calRangeEnd = format(endOfMonth(addMonths(now, 2)), "yyyy-MM-dd");
 
   const [
     { data: projects },
@@ -30,7 +29,7 @@ export default async function HomePage() {
   ] = await Promise.all([
     supabase.from("projects").select("*").order("created_at", { ascending: false }),
     supabase.from("clients").select("*"),
-    supabase.from("events").select("*").gte("event_date", monthStart).lte("event_date", calRangeEnd + "T23:59:59"),
+    supabase.from("events").select("*").gte("event_date", monthStart).lte("event_date", monthEnd + "T23:59:59"),
     supabase.from("invoices").select("*").gte("issued_at", monthStart).lte("issued_at", monthEnd),
     supabase.from("sticky_notes").select("*").is("archived_at", null).order("created_at", { ascending: false }),
   ]);
@@ -45,18 +44,28 @@ export default async function HomePage() {
 
   // KPI 계산
   const inProgressCount = allProjects.filter((p) => p.status === "진행중").length;
+  const todayCreatedCount = allProjects.filter(
+    (p) => p.created_at.slice(0, 10) === today
+  ).length;
   const upcomingDeadlines = allProjects.filter(
     (p) => p.deadline && p.deadline >= today && p.deadline <= in7Days
   ).length;
-  const monthlyInvoiceTotal = allInvoices.reduce((sum, i) => sum + i.amount, 0);
-  const thisMonthProjects = allProjects.filter(
-    (p) => p.created_at >= monthStart
+  const monthlyDeadlines = allProjects.filter(
+    (p) => p.deadline && p.deadline >= monthStart && p.deadline <= monthEnd
   );
-  const completedThisMonth = thisMonthProjects.filter((p) => p.status === "완료").length;
-  const completionRate =
-    thisMonthProjects.length > 0
-      ? Math.round((completedThisMonth / thisMonthProjects.length) * 100)
-      : 0;
+  // 가장 가까운 마감일 (이번 달)
+  const nextDeadlineDays = (() => {
+    const future = monthlyDeadlines
+      .map((p) => p.deadline!)
+      .filter((d) => d >= today)
+      .sort();
+    if (future.length === 0) return null;
+    const diff = Math.ceil((new Date(future[0]).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  })();
+  const totalProjectsCount = allProjects.length;
+  // 견적 합계는 노출은 하지 않지만 추후 사용 가능
+  void allInvoices;
 
   const activeProjects = allProjects.filter((p) => p.status === "진행중");
 
@@ -88,21 +97,38 @@ export default async function HomePage() {
       </div>
 
       {/* KPI 카드 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <KpiCard label="진행중" value={inProgressCount} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="이번주 마감"
+          label="진행 중인 업무"
+          value={inProgressCount}
+          icon={Briefcase}
+          iconColor="#B85C2D"
+          iconBg="rgba(184,92,45,0.13)"
+          change={todayCreatedCount > 0 ? `+${todayCreatedCount} 오늘 추가` : "변동 없음"}
+        />
+        <KpiCard
+          label="완료 예정 (이번 주)"
           value={upcomingDeadlines}
-          accentColor="var(--client-aheeplan)"
+          icon={CheckSquare}
+          iconColor="#3B6FA0"
+          iconBg="rgba(59,111,160,0.13)"
+          change="이번 주 마감"
         />
         <KpiCard
-          label="이번달 견적"
-          value={monthlyInvoiceTotal > 0 ? `${(monthlyInvoiceTotal / 10000).toFixed(0)}만원` : "-"}
+          label="이번 달 마감"
+          value={monthlyDeadlines.length}
+          icon={CalendarIcon}
+          iconColor="#5A7D4F"
+          iconBg="rgba(90,125,79,0.13)"
+          change={nextDeadlineDays !== null ? `D-${nextDeadlineDays}까지` : "예정 없음"}
         />
         <KpiCard
-          label="완료율 (이번달)"
-          value={`${completionRate}%`}
-          accentColor="var(--client-dankook)"
+          label="전체 프로젝트"
+          value={totalProjectsCount}
+          icon={FolderOpen}
+          iconColor="#8B7E6A"
+          iconBg="rgba(139,126,106,0.13)"
+          change="활동 중"
         />
       </div>
 
@@ -189,8 +215,8 @@ export default async function HomePage() {
         })()}
       </div>
 
-      {/* 미니 캘린더 */}
-      <MiniCalendar events={allEvents} />
+      {/* 월간 캘린더 */}
+      <HomeCalendar events={allEvents} />
     </div>
   );
 }
